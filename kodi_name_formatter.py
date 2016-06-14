@@ -1,49 +1,50 @@
 import re, glob, os, datetime, shutil, sys
 from os import walk
 
+#rTorrent mode
 try:
     title = str(sys.argv[1])
+    location = str(sys.argv[2])
 except:
-    title = 'no title'
+    pass
 
+#manual
 try:
-    #location = str(sys.argv[2])
-    location = '/Users/rossphelan/Documents/test_folder'
+    location = str(sys.argv[1])
 except:
-    print "2nd arg LOCATION not found"
+    print "arg LOCATION not found"
     sys.exit()
 
 #Set destination dir
-#dstPath = 'myPath'
-dstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted')
-
+filmDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted')
+showDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted')
 srcPath = os.path.realpath( location )
 
 #Regexes for folder and file detection
 subfolderRegex = "\[subfolder\](.*?)\/"
 showRegex = "\[show\](.*?)\/"
 filmRegex = "\[film\](.*?)\/"
-seasonRegex = "\[season\](\d*?)\/"
-episodeRegex = "\[episode\](\d*?)\/"
 squareBracketsRegex = "(\[.*?\])"
 fileNameRegex = "/([^/]*)\..*" 
 fileTypeRegex = "\.([^/].*)"
 
 
-#Regexes to detect different season filetypes
-#TODO put these in array
-sxxennRegex = "s(\d{1,2})e\d{1,2}"
-xXnnRegex = "(\d{1,2})x\d{2}"
-xxnnRegex = "[^(](\d{2})\d{2}"
+#Regexes to detect different season filetypes. Order important
+seasonRegexes = ["\[season\](\d*?)\/", "s(\d{1,2})e\d{1,2}", "(\d{1,2})x\d{2}", "[^(](\d{2})\d{2}"]
+#seasonRegex = "\[season\](\d*?)\/"
+#sxxennRegex = "s(\d{1,2})e\d{1,2}"
+#xXnnRegex = "(\d{1,2})x\d{2}"
+#xxnnRegex = "[^(](\d{2})\d{2}"
 
-#Regexes to detect different episode filetypes
-#TODO put these in array
-snnexxRegex = "s\d{1,2}e(\d{1,2})"
-exxRegex = "e(\d{2})"
-nXxxRegex = "\dx(\d{2})"
-nnxxRegex = "[^(]\d{2}(\d{2})"
-nxxRegex = "\d(\d{2})"
-xxRegex = "(\d{2})"
+#Regexes to detect different episode filetypes. Order important
+episodeRegexes = ["\[episode\](\d*?)\/", "s\d{1,2}e(\d{1,2})", "e(\d{2})", "\dx(\d{2})", "[^(]\d{2}(\d{2})", "\d(\d{2})", "(\d{2})"]
+#episodeRegex = "\[episode\](\d*?)\/"
+#snnexxRegex = "s\d{1,2}e(\d{1,2})"
+#exxRegex = "e(\d{2})"
+#nXxxRegex = "\dx(\d{2})"
+#nnxxRegex = "[^(]\d{2}(\d{2})"
+#nxxRegex = "\d(\d{2})"
+#xxRegex = "(\d{2})"
 
 #Remove .srt and .ass to ignore subtitles
 allowedFileTypes = [".mkv", ".mp4", ".avi", ".mov", ".mpg", ".srt", ".ass"]
@@ -60,7 +61,6 @@ print "Beginning"
 
 #Checking to see if it we got a file or folder
 if os.path.isdir(srcPath) == True:
-    #Gathering all allowed files
     for (dirpath, dirnames, filenames) in walk(srcPath):
         for filename in filenames:
             for allowedFileType in allowedFileTypes:
@@ -71,7 +71,6 @@ if os.path.isdir(srcPath) == True:
                             inputStringArr.append(newEntry)
                             
 else:
-    #Gathering 
     for allowedFileType in allowedFileTypes:
         if srcPath.endswith(allowedFileType):
             if os.path.getsize( srcPath ) < maxFileSize:
@@ -83,7 +82,12 @@ if len(inputStringArr) == 0:
 
 #Generate new file name
 for index, inputString in enumerate(inputStringArr): 
-    newFilePath = dstPath
+    print '*****'
+    try:
+           print "Title:    " + title
+    except:
+          pass
+    print "From:     " + inputString
 
     try:
         x = re.search(subfolderRegex, inputString, re.IGNORECASE)
@@ -91,8 +95,9 @@ for index, inputString in enumerate(inputStringArr):
     except:
         pass
 
-    #FOR FILM
+    #For Film
     try:
+        newFilePath = filmDstPath
         x = re.search(filmRegex, inputString, re.IGNORECASE)
         filext = ('.' + inputString.split('.')[-1])
         newFileName = x.group(1)
@@ -104,8 +109,9 @@ for index, inputString in enumerate(inputStringArr):
         isFilm = False
     
 
-    #FOR SHOW
+    #For Show
     if not isFilm:
+        newFilePath = showDstPath
         try:
             x = re.search(showRegex, inputString, re.IGNORECASE)
             showName = x.group(1)
@@ -128,59 +134,25 @@ for index, inputString in enumerate(inputStringArr):
         fileName = fileName.replace('1280', '')
         fileName = fileName.replace('264', '')
 
-        try:
-            x = re.search(seasonRegex, inputString, re.IGNORECASE)
-            season = x.group(1).zfill(2)
-        except:
-            x = re.search(sxxennRegex, fileName, re.IGNORECASE)
+        season = "01"
+        for seasonRegex in seasonRegexes:
             try:
+                x = re.search(seasonRegex, inputString, re.IGNORECASE)
                 season = x.group(1).zfill(2)
+                break
             except:
-                x = re.search(xXnnRegex, fileName, re.IGNORECASE)
-                try:
-                    season = x.group(1).zfill(2)
-                except:
-                    x = re.search(xxnnRegex, fileName, re.IGNORECASE)
-                    try:
-                        season = x.group(1).zfill(2)
-                    except:        
-                        season = '01'
+                pass
 
         newFilePath = os.path.join( newFilePath, ("Season " + season) )
 
-        try:
-            x = re.search(episodeRegex, inputString, re.IGNORECASE)
-            newFilePath = os.path.join( newFilePath, x.group(1) )
-        except:
-            pass
-
-        x = re.search(snnexxRegex, fileName, re.IGNORECASE)
-        try:
-            episode = x.group(1)
-        except:
-            x = re.search(exxRegex, fileName, re.IGNORECASE)
+        episode = index
+        for episodeRegex in episodeRegexes:
             try:
-                episode = x.group(1)
-            except:    
-                x = re.search(nXxxRegex, fileName, re.IGNORECASE)
-                try:
-                    episode = x.group(1)
-                except:
-                    x = re.search(nnxxRegex, fileName, re.IGNORECASE)
-                    try:
-                        episode = x.group(1)
-                    except:
-                        x = re.search(nxxRegex, fileName, re.IGNORECASE)
-                        try:
-                            episode = x.group(1)
-                        except:
-                            x = re.search(xxRegex, fileName, re.IGNORECASE)
-                            try:
-                                episode = x.group(1)
-                            except:
-                                episode = index
-                                print "Could not match filename to any episode regex"
-                                print "User array index " + index
+                x = re.search(episodeRegex, inputString, re.IGNORECASE)
+                episode = x.group(1).zfill(2)
+                break
+            except:
+                pass
 
         newFileName = showName + " - S" + season + "E" + episode.zfill(2)
 
@@ -198,11 +170,8 @@ for index, inputString in enumerate(inputStringArr):
     try:
 #       shutil.copy2(inputString, newFileNameAndPath)
         #shutil.move(inputString, newFileNameAndPath)
-        print '*****'
-        print "From: " + inputString
-        print "Title: " + title
         #TODO windows security stuff    
-        print "Created: " + newFileNameAndPath
+        print "Created:  " + newFileNameAndPath
     except:
         print( "<p>Error: %s</p>" % sys.exc_info()[0] )
 
