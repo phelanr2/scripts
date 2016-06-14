@@ -1,4 +1,4 @@
-import re, glob, os, datetime, shutil, sys
+import re, glob, os, datetime, shutil, sys, platform
 from os import walk
 
 #rTorrent mode
@@ -10,7 +10,8 @@ except:
 
 #manual
 try:
-    location = str(sys.argv[1])
+    #location = str(sys.argv[1])
+    location = '/Users/rossphelan/Documents/test_folder'
 except:
     print "arg LOCATION not found"
     sys.exit()
@@ -45,6 +46,11 @@ episodeRegexes = ["\[episode\](\d*?)\/", "s\d{1,2}e(\d{1,2})", "e(\d{2})", "\dx(
 #nnxxRegex = "[^(]\d{2}(\d{2})"
 #nxxRegex = "\d(\d{2})"
 #xxRegex = "(\d{2})"
+
+valid_chars = '-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+#Resultion Types
+resultionTypes = ['480', '720', '1080', '1280', '264']
 
 #Remove .srt and .ass to ignore subtitles
 allowedFileTypes = [".mkv", ".mp4", ".avi", ".mov", ".mpg", ".srt", ".ass"]
@@ -100,7 +106,7 @@ for index, inputString in enumerate(inputStringArr):
         newFilePath = filmDstPath
         x = re.search(filmRegex, inputString, re.IGNORECASE)
         filext = ('.' + inputString.split('.')[-1])
-        newFileName = x.group(1)
+        newFileName = ''.join(c for c in x.group(1) if c in valid_chars)
         #Multiple film films indicate subtitles, create folder for these
         if any( x == filext for x in allowedSubtitleFileTypes ):
             newFilePath = os.path.join(newFilePath, x.group(1))
@@ -114,7 +120,7 @@ for index, inputString in enumerate(inputStringArr):
         newFilePath = showDstPath
         try:
             x = re.search(showRegex, inputString, re.IGNORECASE)
-            showName = x.group(1)
+            showName = ''.join(c for c in x.group(1) if c in valid_chars)
             newFilePath = os.path.join( newFilePath , showName )
         except:
             print "No show name ( [show]name ) found"
@@ -128,11 +134,8 @@ for index, inputString in enumerate(inputStringArr):
             continue
 
         fileName = re.sub(squareBracketsRegex, '', fileName) 
-        fileName = fileName.replace('480', '')
-        fileName = fileName.replace('720', '')
-        fileName = fileName.replace('1080', '')
-        fileName = fileName.replace('1280', '')
-        fileName = fileName.replace('264', '')
+        for resultionType in resultionTypes:
+            fileName = fileName.replace(resultionType, '')
 
         season = "01"
         for seasonRegex in seasonRegexes:
@@ -162,7 +165,8 @@ for index, inputString in enumerate(inputStringArr):
 
     if os.path.isfile(newFileNameAndPath):
         print "File already exists. Creating copy"
-        newFileNameAndPath = os.path.join( newFilePath ,(newFileName + " -copy[" + str(datetime.datetime.utcnow()) + "]" + newFileType) )
+        newFileNameAndPath = os.path.join( newFilePath ,(newFileName + " -copy(" + str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H-%M-%S-%f")
+) + ")" + newFileType) )
 
     if not os.path.exists(newFilePath):
         os.makedirs(newFilePath)
