@@ -7,7 +7,8 @@ except:
     title = 'no title'
 
 try:
-    location = str(sys.argv[2])
+    #location = str(sys.argv[2])
+    location = '/Users/rossphelan/Documents/test_folder'
 except:
     print "2nd arg LOCATION not found"
     sys.exit()
@@ -33,19 +34,20 @@ fileTypeRegex = "\.([^/].*)"
 #TODO put these in array
 sxxennRegex = "s(\d{1,2})e\d{1,2}"
 xXnnRegex = "(\d{1,2})x\d{2}"
-xxnnRegex = "(\d{2})\d{2}"
+xxnnRegex = "[^(](\d{2})\d{2}"
 
 #Regexes to detect different episode filetypes
 #TODO put these in array
 snnexxRegex = "s\d{1,2}e(\d{1,2})"
 exxRegex = "e(\d{2})"
 nXxxRegex = "\dx(\d{2})"
-nnxxRegex = "\d{2}(\d{2})"
+nnxxRegex = "[^(]\d{2}(\d{2})"
 nxxRegex = "\d(\d{2})"
 xxRegex = "(\d{2})"
 
 #Remove .srt and .ass to ignore subtitles
 allowedFileTypes = [".mkv", ".mp4", ".avi", ".mov", ".mpg", ".srt", ".ass"]
+allowedSubtitleFileTypes = [".srt", ".ass"]
 
 oneGB = 1000000000
 tenGB = oneGB * 10
@@ -67,15 +69,14 @@ if os.path.isdir(srcPath) == True:
                         newEntry = (os.path.join(dirpath, filename))
                         if newEntry.find(".unwanted") == -1:
                             inputStringArr.append(newEntry)
-                            break
+                            
 else:
     #Gathering 
     for allowedFileType in allowedFileTypes:
         if srcPath.endswith(allowedFileType):
             if os.path.getsize( srcPath ) < maxFileSize:
                 inputStringArr.append(srcPath)
-                break
-     
+                
 if len(inputStringArr) == 0:
     print "No files found"
     sys.exit()
@@ -88,28 +89,37 @@ for index, inputString in enumerate(inputStringArr):
         x = re.search(subfolderRegex, inputString, re.IGNORECASE)
         newFilePath = os.path.join(newFilePath , x.group(1))
     except:
-        print "No subfolder found"
+        pass
 
     #FOR FILM
     try:
         x = re.search(filmRegex, inputString, re.IGNORECASE)
+        filext = ('.' + inputString.split('.')[-1])
         newFileName = x.group(1)
         #Multiple film films indicate subtitles, create folder for these
-        if len(inputStringArr) > 1:
-            newFilePath = newFilePath + x.group(1) + "/"
+        if any( x == filext for x in allowedSubtitleFileTypes ):
+            newFilePath = os.path.join(newFilePath, x.group(1))
         isFilm = True
     except:
         isFilm = False
     
 
-    #FOR TV
+    #FOR SHOW
     if not isFilm:
+        try:
+            x = re.search(showRegex, inputString, re.IGNORECASE)
+            showName = x.group(1)
+            newFilePath = os.path.join( newFilePath , showName )
+        except:
+            print "No show name ( [show]name ) found"
+            continue
+
         try: 
             x = re.search(fileNameRegex, inputString, re.IGNORECASE)
             fileName = x.group(1)
         except:
             print "No file found"
-            break
+            continue
 
         fileName = re.sub(squareBracketsRegex, '', fileName) 
         fileName = fileName.replace('480', '')
@@ -117,14 +127,6 @@ for index, inputString in enumerate(inputStringArr):
         fileName = fileName.replace('1080', '')
         fileName = fileName.replace('1280', '')
         fileName = fileName.replace('264', '')
-
-        try:
-            x = re.search(showRegex, inputString, re.IGNORECASE)
-            showName = x.group(1)
-            newFilePath = os.path.join( newFilePath , showName )
-        except:
-            print "No show name ( [show]name ) found"
-            sys.exit()
 
         try:
             x = re.search(seasonRegex, inputString, re.IGNORECASE)
@@ -143,8 +145,6 @@ for index, inputString in enumerate(inputStringArr):
                         season = x.group(1).zfill(2)
                     except:        
                         season = '01'
-                        print "No season found ( [season]number ) found"
-                        print "Assuming first season"
 
         newFilePath = os.path.join( newFilePath, ("Season " + season) )
 
@@ -152,8 +152,7 @@ for index, inputString in enumerate(inputStringArr):
             x = re.search(episodeRegex, inputString, re.IGNORECASE)
             newFilePath = os.path.join( newFilePath, x.group(1) )
         except:
-            print "No episode found ( [episode]number ) found"
-            print "Checking file names for episode numbers"
+            pass
 
         x = re.search(snnexxRegex, fileName, re.IGNORECASE)
         try:
@@ -185,10 +184,7 @@ for index, inputString in enumerate(inputStringArr):
 
         newFileName = showName + " - S" + season + "E" + episode.zfill(2)
 
-    #todo strip this out
-    for allowedFileType in allowedFileTypes:
-        if inputString.endswith(allowedFileType):
-            newFileType = allowedFileType
+    newFileType = '.' + inputString.split('.')[-1]
 
     newFileNameAndPath = os.path.join( newFilePath, (newFileName + newFileType) )
 
@@ -201,7 +197,8 @@ for index, inputString in enumerate(inputStringArr):
 
     try:
 #       shutil.copy2(inputString, newFileNameAndPath)
-        shutil.move(inputString, newFileNameAndPath)
+        #shutil.move(inputString, newFileNameAndPath)
+        print '*****'
         print "From: " + inputString
         print "Title: " + title
         #TODO windows security stuff    
