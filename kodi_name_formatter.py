@@ -13,6 +13,7 @@ except:
     sys.exit()
 
 #Set destination dir
+#dstPath = 'myPath'
 dstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted')
 
 srcPath = os.path.realpath( location )
@@ -200,7 +201,7 @@ for index, inputString in enumerate(inputStringArr):
 
     try:
 #       shutil.copy2(inputString, newFileNameAndPath)
-#        shutil.move(inputString, newFileNameAndPath)
+        shutil.move(inputString, newFileNameAndPath)
         print "From: " + inputString
         print "Title: " + title
         #TODO windows security stuff    
