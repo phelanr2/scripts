@@ -106,7 +106,7 @@ for index, inputString in enumerate(inputStringArr):
         newFilePath = filmDstPath
         x = re.search(filmRegex, inputString, re.IGNORECASE)
         filext = ('.' + inputString.split('.')[-1])
-        newFileName = ''.join(c for c in x.group(1) if c in valid_chars)
+        newFileName = ''.join(c for c in x.group(1) if c in valid_chars).strip()
         #Multiple film films indicate subtitles, create folder for these
         if any( x == filext for x in allowedSubtitleFileTypes ):
             newFilePath = os.path.join(newFilePath, x.group(1))
@@ -120,7 +120,7 @@ for index, inputString in enumerate(inputStringArr):
         newFilePath = showDstPath
         try:
             x = re.search(showRegex, inputString, re.IGNORECASE)
-            showName = ''.join(c for c in x.group(1) if c in valid_chars)
+            showName = ''.join(c for c in x.group(1) if c in valid_chars).strip()
             newFilePath = os.path.join( newFilePath , showName )
         except:
             print "No show name ( [show]name ) found"
