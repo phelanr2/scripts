@@ -17,8 +17,8 @@ except:
     sys.exit()
 
 #Set destination dir
-filmDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted')
-showDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted')
+filmDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted/film')
+showDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted/tv')
 srcPath = os.path.realpath( location )
 
 #Regexes for folder and file detection
@@ -31,21 +31,30 @@ fileTypeRegex = "\.([^/].*)"
 
 
 #Regexes to detect different season filetypes. Order important
-seasonRegexes = ["\[season\](\d*?)\/", "s(\d{1,2})e\d{1,2}", "(\d{1,2})x\d{2}", "[^(](\d{2})\d{2}"]
-#seasonRegex = "\[season\](\d*?)\/"
+seasonRegexes = ["s(\d{1,2})e\d{1,2}", "(\d{1,2})x\d{2}", "[^(](\d{2})\d{2}"]
+seasonManualRegex = "\[season\](\d*?)\/"
 #sxxennRegex = "s(\d{1,2})e\d{1,2}"
 #xXnnRegex = "(\d{1,2})x\d{2}"
 #xxnnRegex = "[^(](\d{2})\d{2}"
 
 #Regexes to detect different episode filetypes. Order important
-episodeRegexes = ["\[episode\](\d*?)\/", "s\d{1,2}e(\d{1,2})", "e(\d{2})", "\dx(\d{2})", "[^(]\d{2}(\d{2})", "\d(\d{2})", "(\d{2})"]
-#episodeRegex = "\[episode\](\d*?)\/"
+episodeRegexes = ["s\d{1,2}e(\d{1,2})", "e(\d{2})", "\dx(\d{2})", "[^(]\d{2}(\d{2})", "\d(\d{2})", "(\d{2})"]
+episodeManualRegex = "\[episode\](\d*?)\/"
 #snnexxRegex = "s\d{1,2}e(\d{1,2})"
 #exxRegex = "e(\d{2})"
 #nXxxRegex = "\dx(\d{2})"
 #nnxxRegex = "[^(]\d{2}(\d{2})"
 #nxxRegex = "\d(\d{2})"
 #xxRegex = "(\d{2})"
+ 
+bracketsRegexes = ["(\[.*?\])", "(\(.*?\))", "(\{.*?\})"]
+
+#Must be lower case
+subFolderBrackets = '[subfolder]'
+filmBrackets = '[film]'
+showBrackets = '[show]'
+seasonBrackets = '[season]'
+episodeBrackets = '[episode]'
 
 valid_chars = '-_.() abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 
@@ -62,6 +71,7 @@ tenGB = oneGB * 10
 maxFileSize = tenGB
 
 inputStringArr = []
+fileMovedArr = []
 
 print "Beginning"
 
@@ -95,88 +105,109 @@ for index, inputString in enumerate(inputStringArr):
           pass
     print "From:     " + inputString
 
-    try:
-        x = re.search(subfolderRegex, inputString, re.IGNORECASE)
-        newFilePath = os.path.join(newFilePath , x.group(1))
-    except:
-        pass
+
+    inputStringSplitArr = []
+    pathDirs = inputString
+    while True:
+        pathDirs, leaf = os.path.split(pathDirs)
+        if leaf:
+            inputStringSplitArr.append(leaf)
+        else:
+            break;
+    fileName2, fileExt2 = os.path.splitext(inputStringSplitArr[0])
+    if len(fileName2) == 0 or len(fileExt2) == 0:
+        print 'File not Found: ' + inputString
+        continue
+    for bracketsRegex in bracketsRegexes:
+        fileName2 = re.sub(bracketsRegex, '', fileName2) 
+    for resultionType in resultionTypes:
+        fileName2 = fileName2.replace(resultionType, '')
+
+    #insert subfolder path
 
     #For Film
-    try:
-        newFilePath = filmDstPath
-        x = re.search(filmRegex, inputString, re.IGNORECASE)
-        filext = ('.' + inputString.split('.')[-1])
-        newFileName = ''.join(c for c in x.group(1) if c in valid_chars).strip()
-        #Multiple film films indicate subtitles, create folder for these
-        if any( x == filext for x in allowedSubtitleFileTypes ):
-            newFilePath = os.path.join(newFilePath, x.group(1))
-        isFilm = True
-    except:
-        isFilm = False
-    
+    isFilm = False
+    for inputStringSplit in inputStringSplitArr:
+        if inputStringSplit.lower().find(filmBrackets) != -1:
+            isFilm = True
+            newFilePath = filmDstPath
+            filmName = inputStringSplit.strip(filmBrackets)
+            newFileName = ''.join(c for c in filmName if c in valid_chars).strip()
+            if any( x == fileExt2 for x in allowedSubtitleFileTypes ):
+                newFilePath = os.path.join(newFilePath, filmName)
+            break
+
 
     #For Show
     if not isFilm:
         newFilePath = showDstPath
-        try:
-            x = re.search(showRegex, inputString, re.IGNORECASE)
-            showName = ''.join(c for c in x.group(1) if c in valid_chars).strip()
+
+        for inputStringSplit in inputStringSplitArr:
+            if inputStringSplit.lower().find(showBrackets) != -1:
+                showName = inputStringSplit.strip(showBrackets)
+                showName = ''.join(c for c in showName if c in valid_chars).strip()
+        try: 
             newFilePath = os.path.join( newFilePath , showName )
         except:
-            print "No show name ( [show]name ) found"
+            print "No show name ( [show]name ) or film name ( [film]name ) found"
             continue
-
-        try: 
-            x = re.search(fileNameRegex, inputString, re.IGNORECASE)
-            fileName = x.group(1)
-        except:
-            print "No file found"
-            continue
-
-        fileName = re.sub(squareBracketsRegex, '', fileName) 
-        for resultionType in resultionTypes:
-            fileName = fileName.replace(resultionType, '')
 
         season = "01"
-        for seasonRegex in seasonRegexes:
-            try:
-                x = re.search(seasonRegex, inputString, re.IGNORECASE)
-                season = x.group(1).zfill(2)
+        manualSeason = False
+        for inputStringSplit in inputStringSplitArr:
+            if inputStringSplit.lower().find(seasonBrackets) != -1: 
+                season = inputStringSplit.strip(seasonBrackets)              
+                manualSeason = True
                 break
-            except:
-                pass
+        if not manualSeason:
+            for seasonRegex in seasonRegexes:
+                try:
+                    x = re.search(seasonRegex, fileName2, re.IGNORECASE)
+                    season = x.group(1)
+                    break
+                except:
+                    pass
 
-        newFilePath = os.path.join( newFilePath, ("Season " + season) )
+        newFilePath = os.path.join( newFilePath, ("Season " + season.zfill(2)) )
 
-        episode = index
-        for episodeRegex in episodeRegexes:
-            try:
-                x = re.search(episodeRegex, inputString, re.IGNORECASE)
-                episode = x.group(1).zfill(2)
+        episode = str(index)
+        manualEpisode = False
+        for inputStringSplit in inputStringSplitArr:
+            if inputStringSplit.lower().find(episodeBrackets) != -1:  
+                episode = inputStringSplit.strip(episodeBrackets)            
+                manualEpisode = True
                 break
-            except:
-                pass
+        if not manualEpisode:
+            for episodeRegex in episodeRegexes:
+                try:
+                    x = re.search(episodeRegex, fileName2, re.IGNORECASE)
+                    episode = x.group(1)
+                    break
+                except:
+                    pass
 
-        newFileName = showName + " - S" + season + "E" + episode.zfill(2)
+        newFileName = showName + " - S" + season.zfill(2) + "E" + episode.zfill(2)
 
-    newFileType = '.' + inputString.split('.')[-1]
-
-    newFileNameAndPath = os.path.join( newFilePath, (newFileName + newFileType) )
+    newFileNameAndPath = os.path.join( newFilePath, (newFileName + fileExt2) )
 
     if os.path.isfile(newFileNameAndPath):
         print "File already exists. Creating copy"
-        newFileNameAndPath = os.path.join( newFilePath ,(newFileName + " -copy(" + str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H-%M-%S-%f")
-) + ")" + newFileType) )
+        newFileNameAndPath = os.path.join( newFilePath ,(newFileName + " -copy(" + str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H-%M-%S-%f")) + ")" + newFileType) )
 
     if not os.path.exists(newFilePath):
         os.makedirs(newFilePath)
 
     try:
-#       shutil.copy2(inputString, newFileNameAndPath)
+        #shutil.copy2(inputString, newFileNameAndPath)
         #shutil.move(inputString, newFileNameAndPath)
         #TODO windows security stuff    
         print "Created:  " + newFileNameAndPath
+        fileMovedArr.append(newFileNameAndPath)
     except:
         print( "<p>Error: %s</p>" % sys.exc_info()[0] )
 
 print "Finished"
+print 'Moved'
+for fileMoved in fileMovedArr:
+    print fileMoved
+print str(len(fileMovedArr)) + " files moved"
