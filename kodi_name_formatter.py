@@ -10,8 +10,7 @@ except:
 
 #manual
 try:
-    #location = str(sys.argv[1])
-    location = '/Users/rossphelan/Documents/test_folder'
+    location = str(sys.argv[1])
 except:
     print "arg LOCATION not found"
     sys.exit()
@@ -114,14 +113,14 @@ for index, inputString in enumerate(inputStringArr):
             inputStringSplitArr.append(leaf)
         else:
             break;
-    fileName2, fileExt2 = os.path.splitext(inputStringSplitArr[0])
-    if len(fileName2) == 0 or len(fileExt2) == 0:
+    fileName, fileExt = os.path.splitext(inputStringSplitArr[0])
+    if len(fileName) == 0 or len(fileExt) == 0:
         print 'File not Found: ' + inputString
         continue
     for bracketsRegex in bracketsRegexes:
-        fileName2 = re.sub(bracketsRegex, '', fileName2) 
+        fileName = re.sub(bracketsRegex, '', fileName) 
     for resultionType in resultionTypes:
-        fileName2 = fileName2.replace(resultionType, '')
+        fileName = fileName.replace(resultionType, '')
 
     #insert subfolder path
 
@@ -133,7 +132,7 @@ for index, inputString in enumerate(inputStringArr):
             newFilePath = filmDstPath
             filmName = inputStringSplit.strip(filmBrackets)
             newFileName = ''.join(c for c in filmName if c in valid_chars).strip()
-            if any( x == fileExt2 for x in allowedSubtitleFileTypes ):
+            if any( x == fileExt for x in allowedSubtitleFileTypes ):
                 newFilePath = os.path.join(newFilePath, filmName)
             break
 
@@ -162,7 +161,7 @@ for index, inputString in enumerate(inputStringArr):
         if not manualSeason:
             for seasonRegex in seasonRegexes:
                 try:
-                    x = re.search(seasonRegex, fileName2, re.IGNORECASE)
+                    x = re.search(seasonRegex, fileName, re.IGNORECASE)
                     season = x.group(1)
                     break
                 except:
@@ -180,7 +179,7 @@ for index, inputString in enumerate(inputStringArr):
         if not manualEpisode:
             for episodeRegex in episodeRegexes:
                 try:
-                    x = re.search(episodeRegex, fileName2, re.IGNORECASE)
+                    x = re.search(episodeRegex, fileName, re.IGNORECASE)
                     episode = x.group(1)
                     break
                 except:
@@ -188,7 +187,7 @@ for index, inputString in enumerate(inputStringArr):
 
         newFileName = showName + " - S" + season.zfill(2) + "E" + episode.zfill(2)
 
-    newFileNameAndPath = os.path.join( newFilePath, (newFileName + fileExt2) )
+    newFileNameAndPath = os.path.join( newFilePath, (newFileName + fileExt) )
 
     if os.path.isfile(newFileNameAndPath):
         print "File already exists. Creating copy"
