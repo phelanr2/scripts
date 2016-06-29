@@ -1,23 +1,34 @@
 import re, glob, os, datetime, shutil, sys, platform
 from os import walk
 
+logging = True
+logFilePath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'logfile.txt')
+def textOutput(text):
+    if logging:
+        open(logFilePath,"a+b").write(text + '\n')
+    else:
+        print text
+
 #rTorrent mode
 try:
     title = str(sys.argv[1])
     location = str(sys.argv[2])
 except:
-    pass
+    #manual
+    try:
+        location = str(sys.argv[1])
+    except:
+        textOutput("arg LOCATION not found")
+        sys.exit()
 
-#manual
-try:
-    location = str(sys.argv[1])
-except:
-    print "arg LOCATION not found"
-    sys.exit()
-
+textOutput('*****BEGIN*****')
+textOutput(str(datetime.datetime.utcnow()))
+textOutput('Location: ' + location)
 #Set destination dir
-filmDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted/film')
-showDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , 'converted/tv')
+#filmDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , ('converted/film'))
+filmDstPath = os.path.realpath ('/home/feelin/www/dl/converted/film')
+#showDstPath = os.path.join(os.path.dirname(os.path.abspath(__file__)) , ('converted/show'))
+showDstPath = os.path.realpath ('/home/feelin/www/dl/converted/other')
 srcPath = os.path.realpath( location )
 
 #Regexes for folder and file detection
@@ -72,8 +83,6 @@ maxFileSize = tenGB
 inputStringArr = []
 fileMovedArr = []
 
-print "Beginning"
-
 #Checking to see if it we got a file or folder
 if os.path.isdir(srcPath) == True:
     for (dirpath, dirnames, filenames) in walk(srcPath):
@@ -92,17 +101,17 @@ else:
                 inputStringArr.append(srcPath)
                 
 if len(inputStringArr) == 0:
-    print "No files found"
+    textOutput("No files found")
     sys.exit()
 
 #Generate new file name
 for index, inputString in enumerate(inputStringArr): 
-    print '*****'
+    textOutput('**')
     try:
-           print "Title:    " + title
+           textOutput("Title:    " + title)
     except:
           pass
-    print "From:     " + inputString
+    textOutput("From:     " + inputString)
 
 
     inputStringSplitArr = []
@@ -115,7 +124,7 @@ for index, inputString in enumerate(inputStringArr):
             break;
     fileName, fileExt = os.path.splitext(inputStringSplitArr[0])
     if len(fileName) == 0 or len(fileExt) == 0:
-        print 'File not Found: ' + inputString
+        textOutput('File not Found: ' + inputString)
         continue
     for bracketsRegex in bracketsRegexes:
         fileName = re.sub(bracketsRegex, '', fileName) 
@@ -130,7 +139,7 @@ for index, inputString in enumerate(inputStringArr):
         if inputStringSplit.lower().find(filmBrackets) != -1:
             isFilm = True
             newFilePath = filmDstPath
-            filmName = inputStringSplit.strip(filmBrackets)
+            filmName = inputStringSplit.lstrip(filmBrackets)
             newFileName = ''.join(c for c in filmName if c in valid_chars).strip()
             if any( x == fileExt for x in allowedSubtitleFileTypes ):
                 newFilePath = os.path.join(newFilePath, filmName)
@@ -143,19 +152,19 @@ for index, inputString in enumerate(inputStringArr):
 
         for inputStringSplit in inputStringSplitArr:
             if inputStringSplit.lower().find(showBrackets) != -1:
-                showName = inputStringSplit.strip(showBrackets)
+                showName = inputStringSplit.lstrip(showBrackets)
                 showName = ''.join(c for c in showName if c in valid_chars).strip()
         try: 
             newFilePath = os.path.join( newFilePath , showName )
         except:
-            print "No show name ( [show]name ) or film name ( [film]name ) found"
+            textOutput("No show name ( [show]name ) or film name ( [film]name ) found")
             continue
 
         season = "01"
         manualSeason = False
         for inputStringSplit in inputStringSplitArr:
             if inputStringSplit.lower().find(seasonBrackets) != -1: 
-                season = inputStringSplit.strip(seasonBrackets)              
+                season = inputStringSplit.lstrip(seasonBrackets)              
                 manualSeason = True
                 break
         if not manualSeason:
@@ -173,7 +182,7 @@ for index, inputString in enumerate(inputStringArr):
         manualEpisode = False
         for inputStringSplit in inputStringSplitArr:
             if inputStringSplit.lower().find(episodeBrackets) != -1:  
-                episode = inputStringSplit.strip(episodeBrackets)            
+                episode = inputStringSplit.lstrip(episodeBrackets)            
                 manualEpisode = True
                 break
         if not manualEpisode:
@@ -190,7 +199,7 @@ for index, inputString in enumerate(inputStringArr):
     newFileNameAndPath = os.path.join( newFilePath, (newFileName + fileExt) )
 
     if os.path.isfile(newFileNameAndPath):
-        print "File already exists. Creating copy"
+        textOutput("File already exists. Creating copy")
         newFileNameAndPath = os.path.join( newFilePath ,(newFileName + " -copy(" + str(datetime.datetime.utcnow().strftime("%Y-%m-%d %H-%M-%S-%f")) + ")" + newFileType) )
 
     if not os.path.exists(newFilePath):
@@ -200,13 +209,13 @@ for index, inputString in enumerate(inputStringArr):
         #shutil.copy2(inputString, newFileNameAndPath)
         #shutil.move(inputString, newFileNameAndPath)
         #TODO windows security stuff    
-        print "Created:  " + newFileNameAndPath
+        textOutput("Created:  " + newFileNameAndPath)
         fileMovedArr.append(newFileNameAndPath)
     except:
         print( "<p>Error: %s</p>" % sys.exc_info()[0] )
 
-print "Finished"
-print 'Moved'
+textOutput("Finished")
+textOutput('Moved')
 for fileMoved in fileMovedArr:
-    print fileMoved
-print str(len(fileMovedArr)) + " files moved"
+    textOutput(fileMoved)
+textOutput(str(len(fileMovedArr)) + " files moved")
